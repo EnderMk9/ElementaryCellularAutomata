@@ -30,8 +30,8 @@ while not varsetup:     # Setup of variables and text
         text_ins1 = font3.render("LClick - Turn alive",1,color)         # TEXT FOR Instruc1               color "color"   antialias = 1
         text_ins2 = font3.render("RClick - Kill cell",1,color)          # TEXT FOR Instruc2               color "color"   antialias = 1
         text_ins3 = font3.render("SPACE - Pause/Unpause",1,color)       # TEXT FOR Instruc3               color "color"   antialias = 1
-        text_ins4 = font3.render("Q/W - Increase X/Y of grid",1,color)  # TEXT FOR Instruc4               color "color"   antialias = 1
-        text_ins5 = font3.render("A/S - Decrease X/Y of grid",1,color)  # TEXT FOR Instruc5               color "color"   antialias = 1
+        text_ins4 = font3.render("W - Increase lines",1,color)  # TEXT FOR Instruc4               color "color"   antialias = 1
+        text_ins5 = font3.render("S - Decrease lines",1,color)  # TEXT FOR Instruc5               color "color"   antialias = 1
         text_ins6 = font3.render("BACKSPACE - Reset",1,color)           # TEXT FOR Instruc6               color "color"   antialias = 1
         text_ins7 = font3.render("F/G - Previous/Next rule", 1, color)  # TEXT FOR Instruc7               color "color"   antialias = 1
         text_ins8 = font3.render("T - FromTop act.",1,color)            # TEXT FOR Instruc8               color "color"   antialias = 1
@@ -164,17 +164,13 @@ def events():           # Function that checks the events recorded by PyGame and
             rule -=1; setrule(rule); reset()
         if event.type == pg.KEYDOWN and event.key == pg.K_g and (not rulemode or pause): # If the g key is pressed, increase rule, update it and reset
             rule +=1; setrule(rule); reset()
-        if event.type == pg.KEYDOWN and event.key == pg.K_q:                        # If Q key is pressed:
-            celX += 1; celw = width / celX                                          # Number of cells in X increases and we recalcule the width of cells
-            reset()                    # Resets the game
         if event.type == pg.KEYDOWN and event.key == pg.K_w:                        # If W key is pressed:
-            tlines += 1; celh = width / tlines                                          # Number of cells in Y increases and we recalcule the height of cells
+            tlines += 1; celh = height / tlines                                     # Number of cells in Y increases and we recalcule the height of cells
+            celw = celh; celX = round(width/celw)                                   # Set the width and number of rows
             reset()                    # Resets the game
-        if event.type == pg.KEYDOWN and event.key == pg.K_a:                        # If A key is pressed:
-            celX -= 1; celw = width / celX                                          # Number of cells in X decreases and we recalcule the width of cells
-            reset()                   # Resets the game
         if event.type == pg.KEYDOWN and event.key == pg.K_s:                        # If S key is pressed:
-            tlines -= 1; celh = width / tlines                                          # Number of cells in Y decreases and we recalcule the height of cells
+            tlines -= 1; celh = height / tlines                                     # Number of cells in Y decreases and we recalcule the height of cells
+            celw = celh; celX = round(width/celw)                                   # Set the width and number of rows
             reset()                   # Resets the game
         if pg.mouse.get_pressed()[0] == 1 and margin < pg.mouse.get_pos()[0] < width + + margin and margin < pg.mouse.get_pos()[1] < height + margin and ((margin + celh*(tlines-1) < pg.mouse.get_pos()[1]) or (margin + celh*(1) > pg.mouse.get_pos()[1] and ftop) or not line == 0): # If pressing the left button of the mouse, which is stored in a tuple of 3 coordinates, position 0, and it is clicked within the grid, if line is 0, only on the first line:
             cursor = pg.mouse.get_pos()                                             # Get the coordinates of the cursor

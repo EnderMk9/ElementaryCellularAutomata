@@ -10,8 +10,8 @@ Controls:
 - LClick - Turn alive
 - RClick - Kill cell
 - SPACE - Pause/Unpause
-- Q/W - Increase X/Y of grid
-- A/S - Decrease X/Y of grid
+- W - Increase lines
+- S - Decrease lines
 - BACKSPACE - Reset
 - F/G - Previous/Next rule
 - T - FromTop activate
