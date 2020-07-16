@@ -1,5 +1,6 @@
 import numpy as np      # import NumPy
 import pygame as pg     # import PyGame
+from numba import jit
 pg.font.init()          # Initialize font module from PyGame
 
 textsetup = 0   # variable that records if the initialization of the text on screen has finished
@@ -30,8 +31,8 @@ while not varsetup:     # Setup of variables and text
         text_ins1 = font3.render("LClick - Turn alive",1,color)         # TEXT FOR Instruc1               color "color"   antialias = 1
         text_ins2 = font3.render("RClick - Kill cell",1,color)          # TEXT FOR Instruc2               color "color"   antialias = 1
         text_ins3 = font3.render("SPACE - Pause/Unpause",1,color)       # TEXT FOR Instruc3               color "color"   antialias = 1
-        text_ins4 = font3.render("W - Increase lines",1,color)  # TEXT FOR Instruc4               color "color"   antialias = 1
-        text_ins5 = font3.render("S - Decrease lines",1,color)  # TEXT FOR Instruc5               color "color"   antialias = 1
+        text_ins4 = font3.render("Q/W - Increase X/Y of grid",1,color)  # TEXT FOR Instruc4               color "color"   antialias = 1
+        text_ins5 = font3.render("A/S - Decrease X/Y of grid",1,color)  # TEXT FOR Instruc5               color "color"   antialias = 1
         text_ins6 = font3.render("BACKSPACE - Reset",1,color)           # TEXT FOR Instruc6               color "color"   antialias = 1
         text_ins7 = font3.render("F/G - Previous/Next rule", 1, color)  # TEXT FOR Instruc7               color "color"   antialias = 1
         text_ins8 = font3.render("T - FromTop act.",1,color)            # TEXT FOR Instruc8               color "color"   antialias = 1
@@ -52,9 +53,8 @@ def reset():        # Function which resets the state of the game
     elif ftop: gameState[(celX+2*extra)//2,0] = 1                   # If FromTop mode is enables, it instead places the living cell in the first line
     newgameState = np.zeros((celX+2*extra,tlines))                  # Declaring the matrix newgameState in which we're going to write the changes before writing them into gameState again
     pause = 1; line = 0                                             # Set the game as paused and reset the line count
-
-def evolve():    # Function to update the value of cells acording to the rules of the ECA. Default mode, scroll from bottom
-    global it,line,rulesetbin,gameState,newgameState,celX,tlines    # Set these variables as global
+@jit
+def evolve(gameState,line,tlines):    # Function to update the value of cells acording to the rules of the ECA. Default mode, scroll from bottom
     newgameState = np.zeros((celX+2*extra,tlines))                  # Clean the newgameState matrix
     for y in range(0,line+1):                                       # Check for only the lines that have already been calculated plus 1
         for x in range(0,celX+2*extra):                             # Check for all the rows
@@ -62,19 +62,17 @@ def evolve():    # Function to update the value of cells acording to the rules o
             if not y == tlines-1: newgameState[x,(tlines-2-y)%tlines] = gameState[x,(tlines-1-y)%tlines]        # Saves the current state of the line to the superior line on the matrix, except if it is the last line, the one on top.
             newgameState[x,(tlines-1-y)%tlines] = rulesetbin[7 - int(nvalue, 2)]        # Saves the value of the next iteration in the same line, to calculate this value, we convert the nheight to an int which will act as the reverse index of the number on the binary string of the ruleset to set that iteration
     line += 1                 # When we have finished calculating the iteration, we add one to the number of lines calculated
-    gameState = newgameState  # save the changes made in newgameState to gameState
-
-def evolveftop():    # Function to update the value of cells acording to the rules of the ECA. FromTop mode
-    global it,line,rulesetbin,gameState,newgameState,celX,tlines # set these variables as global
+    return nvalue, newgameState, line
+@jit
+def evolveftop(gameState,line):    # Function to update the value of cells acording to the rules of the ECA. FromTop mode
     newgameState = np.copy(gameState)       # Make newgameState a copy of gameState because we will not be updating previous lines, just one line at a time, defined by line
     for x in range(0,celX+2*extra):         # For every row in the matrix
         nvalue = (str(int(gameState[(x-1)%(celX+2*extra),(line)%tlines]))+str(int(gameState[x,(line)%tlines]))+str(int(gameState[(x+1)%(celX+2*extra),(line)%tlines])))  # We store the values of the cell and the two adyacent cells in a string
         newgameState[x,(line+1)%tlines] = rulesetbin[7 - int(nvalue, 2)]        # Saves the value of the next iteration in the next line, to calculate this value, we convert the nheight to an int which will act as the reverse index of the number on the binary string of the ruleset to set that iteration
     line += 1                 # When we have finished calculating the iteration, we add one to the number of lines calculated
-    gameState = newgameState  # save the changes made in newgameState to gameState
+    return nvalue, newgameState, line
 
 def drawmatrix():       # Function to update and draw the cells according to the matrix
-    global celw,margin,celh,celX,tlines,screen,gameState,extra      # Set these variables as global
     for x in range(0,celX):                                         # Two for loops x and y for the number of cells in each dimension, x and y are the coordinates of the cells
         for y in range(0, tlines):
             if not gameState[x+extra,y] == 0:                       # Only do the next calculations if the cell is alive
@@ -87,8 +85,8 @@ def drawmatrix():       # Function to update and draw the cells according to the
 def updategrid():   # Function to update and draw the grid
     global celX,tlines,celw,celh,pause,gameState,newgameState,color,screen,line,ftop,rule,pauset    # Set these variables as global
     if not pause:                       # If the game is paused, the gameState will not be updated
-        if not ftop: evolve()           # If ftop is not activated, update the matrix using the normal mode
-        elif ftop: evolveftop()         # If ftop is activated, update the matrix using ftop mode
+        if not ftop: (nvalue,gameState,line) = evolve(gameState,line,tlines)           # If ftop is not activated, update the matrix using the normal mode
+        elif ftop: (nvalue,gameState,line) = evolveftop(gameState,line)         # If ftop is activated, update the matrix using ftop mode
     pg.draw.polygon(screen,color,[(margin,margin),(int(celX*celw)+margin,margin),(int(celX*celw)+margin,int(tlines*celh)+margin),(margin,int(tlines*celh)+margin)],0)       # Draw the complete grid screen
     drawmatrix()                        # Draw the living cells in the grid
     pg.display.flip()                   # update all the changes on the screen
@@ -164,13 +162,17 @@ def events():           # Function that checks the events recorded by PyGame and
             rule -=1; setrule(rule); reset()
         if event.type == pg.KEYDOWN and event.key == pg.K_g and (not rulemode or pause): # If the g key is pressed, increase rule, update it and reset
             rule +=1; setrule(rule); reset()
-        if event.type == pg.KEYDOWN and event.key == pg.K_w:                        # If W key is pressed:
-            tlines += 1; celh = height / tlines                                     # Number of cells in Y increases and we recalcule the height of cells
-            celw = celh; celX = round(width/celw)                                   # Set the width and number of rows
+        if event.type == pg.KEYDOWN and event.key == pg.K_q:                        # If Q key is pressed:
+            celX += 1; celw = width / celX                                          # Number of cells in X increases and we recalcule the width of cells
             reset()                    # Resets the game
+        if event.type == pg.KEYDOWN and event.key == pg.K_w:                        # If W key is pressed:
+            tlines += 1; celh = width / tlines                                          # Number of cells in Y increases and we recalcule the height of cells
+            reset()                    # Resets the game
+        if event.type == pg.KEYDOWN and event.key == pg.K_a:                        # If A key is pressed:
+            celX -= 1; celw = width / celX                                          # Number of cells in X decreases and we recalcule the width of cells
+            reset()                   # Resets the game
         if event.type == pg.KEYDOWN and event.key == pg.K_s:                        # If S key is pressed:
-            tlines -= 1; celh = height / tlines                                     # Number of cells in Y decreases and we recalcule the height of cells
-            celw = celh; celX = round(width/celw)                                   # Set the width and number of rows
+            tlines -= 1; celh = width / tlines                                          # Number of cells in Y decreases and we recalcule the height of cells
             reset()                   # Resets the game
         if pg.mouse.get_pressed()[0] == 1 and margin < pg.mouse.get_pos()[0] < width + + margin and margin < pg.mouse.get_pos()[1] < height + margin and ((margin + celh*(tlines-1) < pg.mouse.get_pos()[1]) or (margin + celh*(1) > pg.mouse.get_pos()[1] and ftop) or not line == 0): # If pressing the left button of the mouse, which is stored in a tuple of 3 coordinates, position 0, and it is clicked within the grid, if line is 0, only on the first line:
             cursor = pg.mouse.get_pos()                                             # Get the coordinates of the cursor
